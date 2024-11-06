@@ -6,7 +6,7 @@ use object::{
     Object as _,
 };
 use pdb::{FallibleIterator, Rva, PDB};
-use std::{collections::HashMap, fmt, fs::File, path::PathBuf, rc::Rc, str::FromStr};
+use std::{borrow::Cow, collections::HashMap, fmt, fs::File, path::PathBuf, rc::Rc, str::FromStr};
 use symbolic_demangle::Demangle as _;
 use symsrv::SymsrvDownloader;
 use windows::{core::Owned, Win32::System::Registry::HKEY};
@@ -217,6 +217,8 @@ impl fmt::Display for WindowsVersion {
     }
 }
 
+/// Iterator over interface ids and interface names stored in the windows
+/// registry.
 #[derive(Debug, Clone)]
 pub struct RegistryIIDs {
     interface_key: Rc<Owned<HKEY>>,
@@ -258,7 +260,7 @@ impl RegistryIIDs {
     }
 }
 impl Iterator for RegistryIIDs {
-    type Item = eyre::Result<(uuid::Uuid, String)>;
+    type Item = eyre::Result<(uuid::Uuid, Option<String>)>;
 
     /// Get a subkey of the interface key and interpret its name as an interface
     /// id and its default value as the interface name.
@@ -279,50 +281,67 @@ impl Iterator for RegistryIIDs {
             },
         };
 
-        loop {
-            // Key name can't be more than 255 characters long.
-            // Buffer that receives the name of the subkey, including the terminating null character.
-            // Only the name of the subkey, not the full key hierarchy.
-            let mut key_name = [0; 1024];
-            let result =
-                unsafe { RegEnumKeyW(**self.interface_key, self.index, Some(&mut key_name)) };
-            if result == ERROR_NO_MORE_ITEMS {
-                return None;
-            }
-            self.index += 1;
-            if let Err(e) = result.ok() {
-                return Some(Err(eyre::eyre!(e)).context(
-                    "Failed to open subkey of registry key \
+        // Key name can't be more than 255 characters long.
+        // Buffer that receives the name of the subkey, including the terminating null character.
+        // Only the name of the subkey, not the full key hierarchy.
+        let mut key_name = [0; 1024];
+        let result = unsafe { RegEnumKeyW(**self.interface_key, self.index, Some(&mut key_name)) };
+        if result == ERROR_NO_MORE_ITEMS {
+            return None;
+        }
+        self.index += 1;
+        if let Err(e) = result.ok() {
+            return Some(Err(eyre::eyre!(e)).context(
+                "Failed to open subkey of registry key \
                     HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Interface",
-                ));
-            }
+            ));
+        }
 
-            let key_str = match String::from_utf16(
-                &key_name[..key_name.iter().position(|&c| c == 0).unwrap_or_default()],
-            ) {
-                Ok(v) => v,
-                Err(e) => {
-                    return Some(Err(e).context(
-                        "Failed to convert name to utf16 for registry key in \
+        let key_str = match String::from_utf16(
+            &key_name[..key_name.iter().position(|&c| c == 0).unwrap_or_default()],
+        ) {
+            Ok(v) => v,
+            Err(e) => {
+                return Some(Err(e).context(
+                    "Failed to convert name to utf16 for registry key in \
                         HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Interface",
-                    ))
-                }
-            };
-            let iid = match uuid::Uuid::from_str(key_str.trim_matches(['{', '}'])) {
-                Ok(v) => v,
-                Err(e) => {
-                    return Some(Err(e).context(format!(
-                        "Failed to parse key name as guid for registry key \
+                ))
+            }
+        };
+        let iid = match uuid::Uuid::from_str(key_str.trim_matches(['{', '}'])) {
+            Ok(v) => v,
+            Err(e) => {
+                return Some(Err(e).context(format!(
+                    "Failed to parse key name as guid for registry key \
                         HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Interface\\{key_str}"
-                    )))
-                }
-            };
+                )))
+            }
+        };
 
-            let mut heap_buffer;
-            let mut stack_buffer = [0_u16; 512];
-            let mut value_buf = stack_buffer.as_mut_slice();
-            let mut value_len: u32 = std::mem::size_of_val(value_buf) as u32;
-            let mut result = unsafe {
+        let mut heap_buffer;
+        let mut stack_buffer = [0_u16; 512];
+        let mut value_buf = stack_buffer.as_mut_slice();
+        let mut value_len: u32 = std::mem::size_of_val(value_buf) as u32;
+        let mut result = unsafe {
+            RegGetValueW(
+                **self.interface_key,
+                PCWSTR::from_raw(key_name.as_ptr()),
+                PCWSTR::null(),
+                RRF_RT_REG_SZ,
+                None,
+                Some(value_buf.as_mut_ptr() as *mut core::ffi::c_void),
+                Some(&mut value_len),
+            )
+        };
+        if result == ERROR_MORE_DATA {
+            // Our stack buffer wasn't large enough, use a heap buffer with the required size:
+            heap_buffer = vec![
+                0_u16;
+                value_len as usize / core::mem::size_of::<u16>()
+                    + (value_len % 2) as usize
+            ];
+            value_buf = heap_buffer.as_mut_slice();
+            result = unsafe {
                 RegGetValueW(
                     **self.interface_key,
                     PCWSTR::from_raw(key_name.as_ptr()),
@@ -333,41 +352,22 @@ impl Iterator for RegistryIIDs {
                     Some(&mut value_len),
                 )
             };
-            if result == ERROR_MORE_DATA {
-                heap_buffer = vec![
-                    0_u16;
-                    value_len as usize / core::mem::size_of::<u16>()
-                        + (value_len % 2) as usize
-                ];
-                value_buf = heap_buffer.as_mut_slice();
-                result = unsafe {
-                    RegGetValueW(
-                        **self.interface_key,
-                        PCWSTR::from_raw(key_name.as_ptr()),
-                        PCWSTR::null(),
-                        RRF_RT_REG_SZ,
-                        None,
-                        Some(value_buf.as_mut_ptr() as *mut core::ffi::c_void),
-                        Some(&mut value_len),
-                    )
-                };
-            }
-            if result == ERROR_FILE_NOT_FOUND {
-                // No value (interface name) for this key, so ignore it.
-                continue;
-            }
-            if let Err(e) = result.ok() {
-                return Some(Err(eyre::eyre!(e)).context(format!(
-                    "Failed to read value for subkey of registry key \
-                    HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Interface\\{key_str}",
-                )));
-            }
-            let value_len = value_len as usize / core::mem::size_of::<u16>() - 1;
-
-            let value = String::from_utf16_lossy(&value_buf[..value_len]);
-
-            return Some(Ok((iid, value)));
         }
+        if result == ERROR_FILE_NOT_FOUND {
+            // No value (interface name) for this key:
+            return Some(Ok((iid, None)));
+        }
+        if let Err(e) = result.ok() {
+            return Some(Err(eyre::eyre!(e)).context(format!(
+                "Failed to read value for subkey of registry key \
+                    HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\Interface\\{key_str}",
+            )));
+        }
+        let value_len = value_len as usize / core::mem::size_of::<u16>() - 1;
+
+        let value = String::from_utf16_lossy(&value_buf[..value_len]);
+
+        Some(Ok((iid, Some(value))))
     }
 }
 
@@ -617,6 +617,7 @@ struct DllRelated {
     dll_data: Vec<u8>,
 }
 impl DllRelated {
+    /// Collect data about dll.
     fn collect(dll_info: &PeFile) -> eyre::Result<Self> {
         let mut pdb = dll_info.open_pdb()?;
 
@@ -652,14 +653,84 @@ impl DllRelated {
     }
     /// Symbol together with its estimated size (from the
     /// [`calculate_size_for_symbols`]).
-    fn estimate_symbol_sizes(&self) -> eyre::Result<Vec<SymbolWithSize<'_>>> {
+    fn estimate_symbol_sizes(&self) -> eyre::Result<DllRelatedSymbols<'_>> {
         let mut all_symbols = self
             .symbols
             .iter()
             .map(|sym| Ok((None, sym)))
             .collect::<Vec<_>>()?;
         calculate_size_for_symbols(all_symbols.as_mut_slice(), &self.address_map);
-        Ok(all_symbols)
+        Ok(DllRelatedSymbols {
+            info: self,
+            symbols: all_symbols,
+        })
+    }
+}
+
+pub struct DllRelatedSymbols<'a> {
+    info: &'a DllRelated,
+    symbols: Vec<SymbolWithSize<'a>>,
+}
+impl<'a> DllRelatedSymbols<'a> {
+    fn interface_ids(&self) -> eyre::Result<Vec<IidInfo<'a>>> {
+        let mut all_iid = Vec::new();
+
+        for (size, symbol) in &self.symbols {
+            let Ok(pdb::SymbolData::Public(data)) = symbol.parse() else {
+                continue;
+            };
+            if !data.name.as_bytes().starts_with(b"IID_") {
+                // Note an interface id.
+                continue;
+            }
+            if size.unwrap_or_default().size < 16 {
+                eyre::bail!(
+                    "Expected symbol with IID to have a size that is 16 or larger but it was {}",
+                    size.unwrap_or_default().size
+                );
+            }
+            let Some(rva) = size
+                // Used cached rva if possible:
+                .map(|info| info.rva)
+                // Otherwise compute it:
+                .or_else(|| data.offset.to_rva(&self.info.address_map))
+            else {
+                continue;
+            };
+            let iid: &[u8] = &self.info.dll_data[rva.0 as usize..][..16];
+            let iid = uuid::Uuid::from_slice_le(iid).context("Failed to parse IID as GUID")?;
+
+            all_iid.push(IidInfo {
+                iid,
+                name: data.name.to_string(),
+            });
+            println!("{iid:X} for {}", data.name);
+        }
+
+        // We might keep the vector around for a while, so try to minimize memory usage:
+        all_iid.shrink_to_fit();
+
+        Ok(all_iid)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct IidInfo<'a> {
+    iid: uuid::Uuid,
+    name: Cow<'a, str>,
+}
+impl<'a> IidInfo<'a> {
+    pub fn into_owned(self) -> IidInfo<'static> {
+        IidInfo {
+            iid: self.iid,
+            name: Cow::Owned(self.name.into_owned()),
+        }
+    }
+}
+impl fmt::Display for IidInfo<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self { iid, name, .. } = self;
+        write!(f, "{iid:X} for {name}")
     }
 }
 
@@ -689,6 +760,7 @@ async fn main() -> eyre::Result<()> {
             let reg_iids = RegistryIIDs::open()?;
             for res in reg_iids {
                 let (iid, name) = res?;
+                let Some(name) = name else { continue };
                 if unfiltered
                     || name.contains("VirtualDesktop")
                     || (name.contains("ApplicationView") && !name.contains("CViewManagement"))
@@ -787,44 +859,25 @@ async fn main() -> eyre::Result<()> {
         .transpose()?;
 
     // Search both dll files even though we are likely only interested in IID from actxprxy.dll:
-    let pdb_related = [
-        (&actxprxy_info, &actxprxy_symbols),
-        (&twinui_info, &twinui_symbols),
-    ];
-    for related in pdb_related {
-        let (Some(info), Some(all_symbols)) = related else {
-            continue;
-        };
-
-        for (size, symbol) in all_symbols {
-            let Ok(pdb::SymbolData::Public(data)) = symbol.parse() else {
-                continue;
-            };
-            if !data.name.as_bytes().starts_with(b"IID_") {
-                // Note an interface id.
-                continue;
-            }
+    let all_symbols = [&actxprxy_symbols, &twinui_symbols]
+        .into_iter()
+        .filter_map(|sym| sym.as_ref());
+    let mut all_iid = Vec::<IidInfo<'_>>::new();
+    for symbols in all_symbols {
+        for iid in symbols.interface_ids()? {
             if !unfiltered
-                && !data.name.to_string().contains("VirtualDesktop")
+                && !iid.name.contains("VirtualDesktop")
                 // Note: IApplicationView iid is not in any of the dlls we are currently searching
-                && !data.name.to_string().contains("IApplicationView")
+                && !iid.name.contains("IApplicationView")
             {
                 // Likely not an interface id we are interested in.
                 continue;
             }
-            if size.unwrap_or_default().size < 16 {
-                eyre::bail!(
-                    "Expected IID size to be 16 or larger but it was {}",
-                    size.unwrap_or_default().size
-                );
-            }
-            let rva = data.offset.to_rva(&info.address_map).unwrap_or_default();
-            let iid = &info.dll_data[rva.0 as usize..][..16];
-            let iid = uuid::Uuid::from_slice_le(iid).context("Failed to parse IID as GUID")?;
-
-            println!("{iid:X} for {}", data.name);
+            all_iid.push(iid);
         }
     }
+    all_iid.sort_by(|a, b| a.name.cmp(&b.name));
+    all_iid.iter().for_each(|iid| println!("{iid}"));
     println!();
 
     let (Some(twinui_info), Some(twinui_all_symbols)) = (&twinui_info, twinui_symbols) else {
@@ -835,7 +888,7 @@ async fn main() -> eyre::Result<()> {
     println!("\n\n\nVirtual function tables (vftable) for COM interfaces read from the DLL files using PDB debug info:");
 
     let mut symbol_lookup = HashMap::new();
-    for (info, sym) in &twinui_all_symbols {
+    for (info, sym) in &twinui_all_symbols.symbols {
         let Some(info) = info else { continue };
         symbol_lookup.insert(info.rva, (info, sym));
     }
@@ -843,7 +896,7 @@ async fn main() -> eyre::Result<()> {
     let twinui_image_base =
         object::File::parse(twinui_info.dll_data.as_slice())?.relative_address_base();
 
-    for (size, symbol) in &twinui_all_symbols {
+    for (size, symbol) in &twinui_all_symbols.symbols {
         // Will be either SymbolData::ProcedureReference or
         // SymbolData::Public
 
