@@ -527,7 +527,12 @@ impl PeFile {
         let hash = self.debug_id()?.breakpad().to_string();
 
         // Download and cache a PDB file.
-        let local_path = downloader.get_file(pdb_name, &hash).await?;
+        let local_path = downloader
+            .get_file(pdb_name, &hash)
+            .await
+            .with_context(|| {
+                format!("Failed to download PDB debug info for {pdb_name} (using hash: {hash})")
+            })?;
         self.pdb_path = Some(local_path);
         Ok(())
     }
@@ -704,7 +709,6 @@ impl<'a> DllRelatedSymbols<'a> {
                 iid,
                 name: data.name.to_string(),
             });
-            println!("{iid:X} for {}", data.name);
         }
 
         // We might keep the vector around for a while, so try to minimize memory usage:
@@ -838,8 +842,6 @@ async fn main() -> eyre::Result<()> {
         );
     }
 
-    println!("\n\nInterface ids (IID) read from the DLL files using PDB debug info:\n");
-
     // actxprxy related:
     let actxprxy_info = (!skip_actxprxy)
         .then(|| DllRelated::collect(&actxprxy))
@@ -859,26 +861,31 @@ async fn main() -> eyre::Result<()> {
         .transpose()?;
 
     // Search both dll files even though we are likely only interested in IID from actxprxy.dll:
-    let all_symbols = [&actxprxy_symbols, &twinui_symbols]
-        .into_iter()
-        .filter_map(|sym| sym.as_ref());
-    let mut all_iid = Vec::<IidInfo<'_>>::new();
-    for symbols in all_symbols {
-        for iid in symbols.interface_ids()? {
-            if !unfiltered
+    {
+        println!("\n\nInterface ids (IID) read from the DLL files using PDB debug info:\n");
+
+        let all_symbols = [&actxprxy_symbols, &twinui_symbols]
+            .into_iter()
+            .filter_map(|sym| sym.as_ref());
+        let mut all_iid = Vec::<IidInfo<'_>>::new();
+        for symbols in all_symbols {
+            for iid in symbols.interface_ids()? {
+                if !unfiltered
                 && !iid.name.contains("VirtualDesktop")
                 // Note: IApplicationView iid is not in any of the dlls we are currently searching
                 && !iid.name.contains("IApplicationView")
-            {
-                // Likely not an interface id we are interested in.
-                continue;
+                {
+                    // Likely not an interface id we are interested in.
+                    continue;
+                }
+                all_iid.push(iid);
             }
-            all_iid.push(iid);
         }
+        all_iid.sort_by(|a, b| a.name.cmp(&b.name));
+        all_iid.iter().for_each(|iid| println!("{iid}"));
+
+        println!();
     }
-    all_iid.sort_by(|a, b| a.name.cmp(&b.name));
-    all_iid.iter().for_each(|iid| println!("{iid}"));
-    println!();
 
     let (Some(twinui_info), Some(twinui_all_symbols)) = (&twinui_info, twinui_symbols) else {
         eprintln!("\nSkipping virtual function tables because of --skip-twinui flag\n");
