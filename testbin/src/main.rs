@@ -41,17 +41,17 @@ fn main() {
     event_loop.set_control_flow(ControlFlow::Wait);
 
     event_loop
-        .run(move |event, _evtloop| {
+        .run(move |event, evtloop| {
             match event {
                 // Main window events
-                // Event::WindowEvent {
-                //     event: WindowEvent::CloseRequested,
-                //     window_id,
-                // } if window_id == your_app_window.id() => {
-                //     let _ = _thread.stop();
+                Event::WindowEvent {
+                    event: WindowEvent::CloseRequested,
+                    window_id,
+                } if window_id == your_app_window.id() => {
+                    let _ = _thread.stop();
 
-                //     elewt.exit();
-                // }
+                    evtloop.exit();
+                }
 
                 // User events
                 Event::UserEvent(e) => match e {
