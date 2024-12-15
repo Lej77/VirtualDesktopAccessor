@@ -132,7 +132,7 @@ impl<'a> VirtualDesktopNotificationWrapper<'a> {
     pub fn new(
         com_objects: &'a ComObjects,
         sender: Box<dyn Fn(DesktopEvent)>,
-    ) -> Result<Pin<Box<VirtualDesktopNotificationWrapper>>> {
+    ) -> Result<Pin<Box<VirtualDesktopNotificationWrapper<'a>>>> {
         let ptr: Pin<Box<IVirtualDesktopNotification>> =
             Box::pin(VirtualDesktopNotification { sender }.into());
         let raw_ptr = ptr.as_raw();
