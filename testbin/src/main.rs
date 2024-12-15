@@ -1,8 +1,6 @@
 use winit::{
-    event::{self, Event, WindowEvent},
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoopBuilder},
-    platform::windows::EventLoopBuilderExtWindows,
-    window::{Window, WindowAttributes},
+    event::Event,
+    event_loop::{ControlFlow, EventLoopBuilder},
 };
 use winvd::*;
 
@@ -39,7 +37,7 @@ fn main() {
     event_loop.set_control_flow(ControlFlow::Wait);
 
     event_loop
-        .run(move |event, elewt| {
+        .run(move |event, _evtloop| {
             match event {
                 // Main window events
                 // Event::WindowEvent {
