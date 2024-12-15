@@ -34,7 +34,7 @@
 //!
 //! If you read the rules carefully, ComIn is most common usecase in Rust
 //! API definitions as most parameters are `In` parameters.
-#![allow(non_upper_case_globals, clippy::upper_case_acronyms)]
+#![allow(non_upper_case_globals, clippy::upper_case_acronyms, non_camel_case_types)]
 
 use crate::comobjects::HRESULTHelpers;
 use std::ffi::c_void;

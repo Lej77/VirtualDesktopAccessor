@@ -11,6 +11,6 @@ publish = false
 multiple-windows-versions = ["winvd/multiple-windows-versions"]
 
 [dependencies]
-winit = "0.30"
+winit = "0.30.5"
 winvd = { path = "../", features = ["winit"] }
 once_cell = "1.5.0"

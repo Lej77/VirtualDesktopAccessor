@@ -184,7 +184,7 @@ fn eat_error<T>(func: impl FnOnce() -> Result<T>) -> Option<T> {
 
 // Allow unused variable warnings
 #[allow(unused_variables)]
-impl IVirtualDesktopNotification_Impl for VirtualDesktopNotification {
+impl IVirtualDesktopNotification_Impl for VirtualDesktopNotification_Impl {
     unsafe fn current_virtual_desktop_changed(
         &self,
         desktop_old: ComIn<IVirtualDesktop>,

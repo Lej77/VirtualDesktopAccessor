@@ -86,7 +86,7 @@ fn test_move_notepad_between_desktops() {
         let notepad_hwnd = unsafe {
             let notepad = "notepad\0".encode_utf16().collect::<Vec<_>>();
             let pw = PCWSTR::from_raw(notepad.as_ptr());
-            FindWindowW(pw, PCWSTR::null())
+            FindWindowW(pw, PCWSTR::null()).unwrap()
         };
         assert!(
             notepad_hwnd != HWND::default(),
@@ -144,7 +144,7 @@ fn test_pin_notepad() {
         let notepad_hwnd = unsafe {
             let notepad = "notepad\0".encode_utf16().collect::<Vec<_>>();
             let pw = PCWSTR::from_raw(notepad.as_ptr());
-            FindWindowW(pw, PCWSTR::null())
+            FindWindowW(pw, PCWSTR::null()).unwrap()
         };
         assert!(
             notepad_hwnd != HWND::default(),
@@ -188,7 +188,7 @@ fn test_pin_notepad_app() {
         let notepad_hwnd = unsafe {
             let notepad = "notepad\0".encode_utf16().collect::<Vec<_>>();
             let pw = PCWSTR::from_raw(notepad.as_ptr());
-            FindWindowW(pw, PCWSTR::null())
+            FindWindowW(pw, PCWSTR::null()).unwrap()
         };
         assert!(
             notepad_hwnd != HWND::default(),
@@ -262,10 +262,13 @@ fn test_errors() {
         let notepad_hwnd = unsafe {
             let notepad = "notepad\0".encode_utf16().collect::<Vec<_>>();
             let pw = PCWSTR::from_raw(notepad.as_ptr());
-            FindWindowW(pw, PCWSTR::null())
+            FindWindowW(pw, PCWSTR::null()).unwrap()
         };
 
-        assert_ne!(notepad_hwnd.0, 0, "Notepad must be running for this test");
+        assert_ne!(
+            notepad_hwnd.0, 0 as _,
+            "Notepad must be running for this test"
+        );
 
         let err = get_desktop(99999).set_name("").unwrap_err();
         assert_eq!(err, Error::DesktopNotFound);
@@ -273,13 +276,13 @@ fn test_errors() {
         let err = switch_desktop(99999).unwrap_err();
         assert_eq!(err, Error::DesktopNotFound);
 
-        let err = get_desktop_by_window(HWND(9999999)).unwrap_err();
+        let err = get_desktop_by_window(HWND(9999999 as _)).unwrap_err();
         assert_eq!(err, Error::WindowNotFound);
 
         let err = move_window_to_desktop(99999, &notepad_hwnd).unwrap_err();
         assert_eq!(err, Error::DesktopNotFound);
 
-        let err = move_window_to_desktop(0, &HWND(999999)).unwrap_err();
+        let err = move_window_to_desktop(0, &HWND(999999 as _)).unwrap_err();
         assert_eq!(err, Error::WindowNotFound);
     });
 }
