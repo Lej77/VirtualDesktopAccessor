@@ -34,6 +34,7 @@
 ///
 /// If you read the rules carefully, ComIn is most common usecase in Rust
 /// API definitions as most parameters are `In` parameters.
+#[allow(non_camel_case_types)]
 #[allow(non_upper_case_globals)]
 use std::ffi::c_void;
 use std::ops::Deref;

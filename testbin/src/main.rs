@@ -1,7 +1,8 @@
 use winit::{
-    event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoopBuilder},
-    window::WindowBuilder,
+    event::{self, Event, WindowEvent},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoopBuilder},
+    platform::windows::EventLoopBuilderExtWindows,
+    window::{Window, WindowAttributes},
 };
 use winvd::*;
 
@@ -13,6 +14,12 @@ enum MyCustomEvents {
     DesktopEvent(DesktopEvent),
 }
 
+impl Default for MyCustomEvents {
+    fn default() -> Self {
+        MyCustomEvents::MyEvent1
+    }
+}
+
 // From DesktopEvent
 impl From<DesktopEvent> for MyCustomEvents {
     fn from(e: DesktopEvent) -> Self {
@@ -21,13 +28,13 @@ impl From<DesktopEvent> for MyCustomEvents {
 }
 
 fn main() {
-    let event_loop = EventLoopBuilder::<MyCustomEvents>::with_user_event()
+    let event_loop = EventLoopBuilder::<MyCustomEvents>::default()
         .build()
         .unwrap();
-    let your_app_window = WindowBuilder::new().build(&event_loop).unwrap();
-
+    // let attrs = WindowAttributes::default().with_title("Hello, world!");
     let proxy = event_loop.create_proxy();
-    let mut _thread = listen_desktop_events(proxy).unwrap();
+
+    let mut _thread = listen_desktop_events(DesktopEventSender::Winit(proxy)).unwrap();
 
     event_loop.set_control_flow(ControlFlow::Wait);
 
@@ -35,14 +42,14 @@ fn main() {
         .run(move |event, elewt| {
             match event {
                 // Main window events
-                Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    window_id,
-                } if window_id == your_app_window.id() => {
-                    let _ = _thread.stop();
+                // Event::WindowEvent {
+                //     event: WindowEvent::CloseRequested,
+                //     window_id,
+                // } if window_id == your_app_window.id() => {
+                //     let _ = _thread.stop();
 
-                    elewt.exit();
-                }
+                //     elewt.exit();
+                // }
 
                 // User events
                 Event::UserEvent(e) => match e {
