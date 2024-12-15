@@ -90,6 +90,11 @@ pub enum DesktopEvent {
     WindowChanged(HWND),
 }
 
+// HWND is supposedly not thread safe anymore because it wraps `pub *mut
+// c_void`, but in reality it is!
+unsafe impl Sync for DesktopEvent {}
+unsafe impl Send for DesktopEvent {}
+
 /// Create event sending thread, give this `crossbeam_channel::Sender<T>`,
 /// `winit::event_loop::EventLoopProxy<T>`, or `std::sync::mpsc::Sender<T>`.
 ///

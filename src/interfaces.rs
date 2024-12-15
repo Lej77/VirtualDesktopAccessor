@@ -472,6 +472,11 @@ pub unsafe trait IVirtualDesktopManagerInternal: IUnknown {
 
     pub unsafe fn switch_desktop(&self, desktop: ComIn<IVirtualDesktop>) -> HRESULT;
 
+    pub unsafe fn switch_desktop_and_move_foreground_view(
+        &self,
+        desktop: ComIn<IVirtualDesktop>,
+    ) -> HRESULT;
+
     pub unsafe fn create_desktop(&self, out_desktop: *mut Option<IVirtualDesktop>) -> HRESULT;
 
     pub unsafe fn move_desktop(&self, in_desktop: ComIn<IVirtualDesktop>, index: UINT) -> HRESULT;

@@ -111,7 +111,7 @@ static SENDER_THREAD: Lazy<Arc<Mutex<Option<(DesktopEventThread, std::thread::Jo
 pub extern "C" fn RegisterPostMessageHook(listener_hwnd: HWND, message_offset: u32) -> i32 {
     {
         let mut a = LISTENER_HWNDS.lock().unwrap();
-        a.insert(listener_hwnd.0);
+        a.insert(listener_hwnd.0 as isize);
     }
     {
         let mut a = SENDER_THREAD.lock().unwrap();
@@ -128,7 +128,7 @@ pub extern "C" fn RegisterPostMessageHook(listener_hwnd: HWND, message_offset: u
                             for hwnd in a.iter() {
                                 unsafe {
                                     let _ = PostMessageW(
-                                        HWND(*hwnd as isize),
+                                        HWND(*hwnd as _),
                                         message_offset,
                                         WPARAM(old_index as usize),
                                         LPARAM(new_index as isize),
@@ -160,7 +160,7 @@ pub extern "C" fn RegisterPostMessageHook(listener_hwnd: HWND, message_offset: u
 #[no_mangle]
 pub extern "C" fn UnregisterPostMessageHook(listener_hwnd: HWND) {
     let mut a = LISTENER_HWNDS.lock().unwrap();
-    a.remove(&listener_hwnd.0);
+    a.remove(&(listener_hwnd.0 as isize));
     if a.len() == 0 {
         let mut a = SENDER_THREAD.lock().unwrap();
         if let Some((mut sender_thread, listener_thread)) = a.take() {
