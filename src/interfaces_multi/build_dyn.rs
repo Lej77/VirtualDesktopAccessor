@@ -872,7 +872,7 @@ support_interface!(MacroOptions {
 /// implements its interface using [`IVirtualDesktopNotification_Impl`].
 impl<T> From<T> for IVirtualDesktopNotification
 where
-    T: IVirtualDesktopNotification_Impl,
+    T: IVirtualDesktopNotification_Impl + 'static,
 {
     fn from(value: T) -> Self {
         // Each Windows version has a unique "adaptor" type that implements its
@@ -893,7 +893,7 @@ where
     }
 }
 #[allow(non_camel_case_types)]
-pub trait IVirtualDesktopNotification_Impl {
+pub trait IVirtualDesktopNotification_Impl: 'static {
     unsafe fn virtual_desktop_created(&self, desktop: ComIn<IVirtualDesktop>) -> HRESULT;
 
     unsafe fn virtual_desktop_destroy_begin(

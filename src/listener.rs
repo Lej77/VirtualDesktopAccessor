@@ -185,6 +185,10 @@ fn eat_error<T>(func: impl FnOnce() -> Result<T>) -> Option<T> {
     }
 }
 
+#[cfg(feature = "multiple-windows-versions")]
+#[allow(non_camel_case_types)]
+type VirtualDesktopNotification_Impl = VirtualDesktopNotification;
+
 // Allow unused variable warnings
 #[allow(unused_variables)]
 impl IVirtualDesktopNotification_Impl for VirtualDesktopNotification_Impl {

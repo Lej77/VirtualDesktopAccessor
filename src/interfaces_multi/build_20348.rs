@@ -235,7 +235,7 @@ reusable_com_interface!(
         {
             pub inner: T,
         }
-        impl<T> IVirtualDesktopNotification_Impl for VirtualDesktopNotificationAdaptor<T>
+        impl<T> IVirtualDesktopNotification_Impl for VirtualDesktopNotificationAdaptor_Impl<T>
         where
             T: build_dyn::IVirtualDesktopNotification_Impl,
         {
