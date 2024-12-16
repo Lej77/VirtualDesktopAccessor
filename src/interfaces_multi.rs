@@ -12,7 +12,7 @@
 use std::ffi::c_void;
 use std::ops::Deref;
 use windows::{
-    core::{Interface, IUnknown, IUnknown_Vtbl, GUID, HRESULT, HSTRING},
+    core::{IUnknown, IUnknown_Vtbl, Interface, GUID, HRESULT, HSTRING},
     Win32::{Foundation::HWND, UI::Shell::Common::IObjectArray},
 };
 
@@ -54,17 +54,20 @@ declare_versions!(
     mod build_17134; // Interface change (only for unused methods, but still IDD change)
     mod build_17663; // Interface change (only for unused methods, but still IDD change)
     mod build_19045; // IDD change
+
     // Windows 10 Enterprise LTSC (Long-Term Servicing Channel)
     mod build_19044_4355; // IDD change
+
     // Windows Server:
     mod build_20348; // Interface change
+
     // Windows 11:
     mod build_22000; // Interface change
     mod build_22621_2215; // Interface change
     mod build_22621_3155; // IID change
     mod build_22631_2428; // IID change
     mod build_22631_3155; // IID change
-    mod build_26100; // Interface change
+    mod build_26100;
 );
 mod build_dyn;
 

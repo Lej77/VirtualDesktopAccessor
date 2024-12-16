@@ -1058,10 +1058,7 @@ impl IVirtualDesktopManagerInternal {
     pub unsafe fn update_wallpaper_for_all(&self, name: HSTRING) -> HRESULT;
 
     #[optional_method]
-    pub unsafe fn switch_desktop_with_animation(
-        &self,
-        desktop: ComIn<IVirtualDesktop>,
-    ) -> HRESULT;
+    pub unsafe fn switch_desktop_with_animation(&self, desktop: ComIn<IVirtualDesktop>) -> HRESULT;
 }
 impl IVirtualDesktopManagerInternal {
     pub unsafe fn query_service(provider: &IServiceProvider) -> crate::Result<Self> {

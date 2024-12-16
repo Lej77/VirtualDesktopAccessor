@@ -166,7 +166,10 @@ impl<'a> Drop for VirtualDesktopNotificationWrapper<'a> {
     }
 }
 
-#[cfg_attr(not(feature = "multiple-windows-versions"), windows::core::implement(IVirtualDesktopNotification))]
+#[cfg_attr(
+    not(feature = "multiple-windows-versions"),
+    windows::core::implement(IVirtualDesktopNotification)
+)]
 struct VirtualDesktopNotification {
     sender: Box<dyn Fn(DesktopEvent)>,
 }
@@ -217,9 +220,7 @@ impl IVirtualDesktopNotification_Impl for VirtualDesktopNotification_Impl {
 
     unsafe fn virtual_desktop_created(&self, desktop: ComIn<IVirtualDesktop>) -> HRESULT {
         eat_error(|| {
-            (self.sender)(DesktopEvent::DesktopCreated(
-                desktop.try_into()?,
-            ));
+            (self.sender)(DesktopEvent::DesktopCreated(desktop.try_into()?));
             Ok(())
         });
         HRESULT(0)

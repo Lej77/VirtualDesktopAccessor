@@ -224,10 +224,7 @@ where
 
     #[cfg(debug_assertions)]
     if let Err(er) = &value {
-        log_format!(
-            "Com_objects function \"{_fn_name}\" failed with {:?}",
-            er
-        );
+        log_format!("Com_objects function \"{_fn_name}\" failed with {:?}", er);
     }
 
     value
@@ -356,7 +353,9 @@ impl ComObjects {
             .map_err(|_| Error::InternalBorrowError)?;
         if pinned_apps.is_none() {
             let provider = self.get_provider()?;
-            *pinned_apps = Some(Rc::new(unsafe { IVirtualDesktopPinnedApps::query_service(&provider)? }));
+            *pinned_apps = Some(Rc::new(unsafe {
+                IVirtualDesktopPinnedApps::query_service(&provider)?
+            }));
         }
         pinned_apps
             .as_ref()

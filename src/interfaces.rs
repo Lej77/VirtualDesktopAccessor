@@ -34,7 +34,11 @@
 //!
 //! If you read the rules carefully, ComIn is most common usecase in Rust
 //! API definitions as most parameters are `In` parameters.
-#![allow(non_upper_case_globals, clippy::upper_case_acronyms, non_camel_case_types)]
+#![allow(
+    non_upper_case_globals,
+    clippy::upper_case_acronyms,
+    non_camel_case_types
+)]
 
 use crate::comobjects::HRESULTHelpers;
 use std::ffi::c_void;
@@ -552,10 +556,7 @@ pub unsafe trait IVirtualDesktopManagerInternal: IUnknown {
     ) -> HRESULT;
     pub unsafe fn switch_remote_desktop(&self, desktop: ComIn<IVirtualDesktop>) -> HRESULT;
 
-    pub unsafe fn switch_desktop_with_animation(
-        &self,
-        desktop: ComIn<IVirtualDesktop>,
-    ) -> HRESULT;
+    pub unsafe fn switch_desktop_with_animation(&self, desktop: ComIn<IVirtualDesktop>) -> HRESULT;
 
     pub unsafe fn get_last_active_desktop(
         &self,
