@@ -67,7 +67,7 @@ declare_versions!(
     mod build_22621_3155; // IID change
     mod build_22631_2428; // IID change
     mod build_22631_3155; // IID change
-    mod build_26100;
+    mod build_26100; // Interface change
 );
 mod build_dyn;
 

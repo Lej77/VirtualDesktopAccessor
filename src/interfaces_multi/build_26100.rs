@@ -8,12 +8,15 @@
 //!
 //! # Interface definitions
 //!
-//! The interface definitions were found at
+//! Updated interface definitions were found at
 //! [MScholtes/VirtualDesktop/VirtualDesktop11-24H2.cs](https://github.com/MScholtes/VirtualDesktop/blob/c601d38796e947d7647c9124a5087fb4b595cbd9/VirtualDesktop11-24H2.cs).
 //!
 //! All the interface ids seem to have remained the same as in the previous
 //! version but a `switch_desktop_and_move_foreground_view` method were added to
 //! the `IVirtualDesktopManagerInternal` interface.
+//!
+//! `winvd` was updated to support this Windows release with [commit
+//! `873cd38729d9c6e881e5ab5f1d04de6f035421d9`](https://github.com/Ciantic/VirtualDesktopAccessor/commit/873cd38729d9c6e881e5ab5f1d04de6f035421d9).
 
 use super::*;
 use build_22631_3155 as build_prev;
