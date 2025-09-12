@@ -20,6 +20,9 @@ jobs:
 
       - name: Build release DLL
         run: cargo build --release --manifest-path .\dll\Cargo.toml --features multiple-windows-versions
+        env:
+          # https://rust-lang.github.io/rfcs/1721-crt-static.html
+          RUSTFLAGS: -C target-feature=+crt-static
 
       - name: Upload DLL
         uses: actions/upload-artifact@v4
