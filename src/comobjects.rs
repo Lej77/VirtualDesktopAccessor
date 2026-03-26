@@ -833,7 +833,15 @@ fn get_idesktop_guid(desktop: &IVirtualDesktop) -> Result<GUID> {
 }
 
 thread_local! {
-    static COM_OBJECTS: ComObjects = ComObjects::new();
+    // ManuallyDrop suppresses the TLS destructor. Without it, process exit
+    // drops the cached COM proxies during LdrShutdownProcess *after*
+    // combase.dll's own TLS state has been torn down, and IUnknown::Release
+    // crashes in combase!TLSAddToMap trying to re-create it.
+    //
+    // Leaking is safe: the OS reclaims all memory at process exit, and the COM
+    // server detects dead clients via its OXID ping mechanism.
+    static COM_OBJECTS: std::mem::ManuallyDrop<ComObjects> =
+        std::mem::ManuallyDrop::new(ComObjects::new());
 }
 
 /// This is a helper function to initialize and run COM related functions in a
