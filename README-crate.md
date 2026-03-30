@@ -2,8 +2,8 @@
 
 The implementation abstracts the annoying COM API into simple functions.
 
-https://crates.io/crates/winvd
-https://github.com/ciantic/VirtualDesktopAccessor/tree/rust/
+<https://crates.io/crates/winvd>
+<https://github.com/ciantic/VirtualDesktopAccessor/tree/rust/>
 
 
 ### Example
@@ -40,7 +40,7 @@ WIP see more examples from the [testbin sources 🢅](https://github.com/Ciantic
 
 ### Notes
 
-```
+```shell
 cargo clean
 cargo doc --all-features
 cargo build --release --workspace

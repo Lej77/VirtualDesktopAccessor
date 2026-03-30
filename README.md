@@ -7,6 +7,12 @@ This repository also contains [Rust library `winvd`](./README-crate.md) for acce
 You can browse the latest documentation of the forked `winvd` library at:\
 <https://lej77.github.io/VirtualDesktopAccessor>
 
+To use the forked `winvd` crate use:
+
+```toml
+winvd = { git = "https://github.com/Lej77/VirtualDesktopAccessor.git", tag = "v0.0.48-extra.1", features = ["multiple-windows-versions"] }
+```
+
 ## AutoHotkey example here:
 
 - [AutoHotkey V1 example.ahk ⬅️](./example.ahk)
