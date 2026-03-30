@@ -19,7 +19,7 @@ jobs:
       #  uses: Swatinem/rust-cache@v2
 
       - name: Build release DLL
-        run: cargo build --release --manifest-path .\dll\Cargo.toml --features multiple-windows-versions
+        run: cargo build --release --manifest-path .\dll\Cargo.toml --features multiple-windows-versions,windows-manifest
         env:
           # https://rust-lang.github.io/rfcs/1721-crt-static.html
           RUSTFLAGS: -C target-feature=+crt-static

@@ -1,9 +1,14 @@
 [package]
 name = "dll"
-version = "0.1.0"
-authors = ["Jari Pennanen <ciantic@oksidi.com>", "Lej77 <31554212+Lej77@users.noreply.github.com>"]
+version.workspace = true
+authors.workspace = true
 edition = "2021"
 publish = false
+build = "build.rs"
+
+[package.metadata.winresource]
+FileDescription = "VirtualDesktopAccessor"
+ProductName = "VirtualDesktopAccessor"
 
 [lib]
 name = "VirtualDesktopAccessor"
@@ -27,5 +32,9 @@ windows = { version = "0.58", features = [
     "Win32_Foundation",
 ] }
 
+[build-dependencies]
+winresource = { version = "0.1", optional = true }
+
 [features]
 multiple-windows-versions = ["winvd/multiple-windows-versions"]
+windows-manifest = ["dep:winresource"]
