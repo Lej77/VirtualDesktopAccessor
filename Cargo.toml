@@ -49,5 +49,5 @@ all-features = true
 members = ["testbin", "dll"] # , "examples/with-iced"]
 
 [workspace.package]
-version = "0.0.48-extra.1"
+version = "0.0.48-extra.2"
 authors = ["Jari Otto Oskari Pennanen", "Lej77 <31554212+Lej77@users.noreply.github.com>"]

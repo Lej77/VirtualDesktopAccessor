@@ -278,7 +278,7 @@ dependencies = [
 
 [[package]]
 name = "dll"
-version = "0.0.48-extra.1"
+version = "0.0.48-extra.2"
 dependencies = [
  "crossbeam-channel",
  "once_cell",
@@ -1788,7 +1788,7 @@ dependencies = [
 
 [[package]]
 name = "winvd"
-version = "0.0.48-extra.1"
+version = "0.0.48-extra.2"
 dependencies = [
  "crossbeam-channel",
  "macro_rules_attribute",

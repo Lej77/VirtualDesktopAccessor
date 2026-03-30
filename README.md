@@ -10,7 +10,7 @@ You can browse the latest documentation of the forked `winvd` library at:\
 To use the forked `winvd` crate use:
 
 ```toml
-winvd = { git = "https://github.com/Lej77/VirtualDesktopAccessor.git", tag = "v0.0.48-extra.1", features = ["multiple-windows-versions"] }
+winvd = { git = "https://github.com/Lej77/VirtualDesktopAccessor.git", tag = "v0.0.48-extra.2", features = ["multiple-windows-versions"] }
 ```
 
 ## AutoHotkey example here:
