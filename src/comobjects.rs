@@ -257,7 +257,7 @@ macro_rules! retry_function {(
 )}
 
 impl ComObjects {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             provider: RefCell::new(None),
             manager: RefCell::new(None),
@@ -841,7 +841,7 @@ thread_local! {
     // Leaking is safe: the OS reclaims all memory at process exit, and the COM
     // server detects dead clients via its OXID ping mechanism.
     static COM_OBJECTS: std::mem::ManuallyDrop<ComObjects> =
-        std::mem::ManuallyDrop::new(ComObjects::new());
+        const { std::mem::ManuallyDrop::new(ComObjects::new()) };
 }
 
 /// This is a helper function to initialize and run COM related functions in a
