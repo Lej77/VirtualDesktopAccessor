@@ -3,32 +3,53 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch: # Allows you to trigger the build manually
 
 jobs:
   build:
     name: Build
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            release_as: VirtualDesktopAccessor.dll
+          - target: aarch64-pc-windows-msvc
+            release_as: VirtualDesktopAccessor-aarch64.dll
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       #- name: Configure cache
       #  uses: Swatinem/rust-cache@v2
 
       - name: Build release DLL
-        run: cargo build --release --manifest-path .\dll\Cargo.toml --features multiple-windows-versions,windows-manifest
+        run: cargo build --release --manifest-path .\dll\Cargo.toml --features multiple-windows-versions,windows-manifest --target ${{ matrix.target }}
         env:
           # https://rust-lang.github.io/rfcs/1721-crt-static.html
           RUSTFLAGS: -C target-feature=+crt-static
 
-      - name: Upload DLL
+      - name: Post Build | Move DLL
+        run: |
+          mkdir uploads
+          mv target/${{ matrix.target }}/release/VirtualDesktopAccessor.dll uploads/${{ matrix.release_as }}
+
+      - name: Post Build | Display structure of uploads folder
+        run: ls uploads
+
+      - name: Post Build | Upload DLL
         uses: actions/upload-artifact@v4
         with:
-          name: release_dll
-          path: target/release/VirtualDesktopAccessor.dll
+          name: dll-${{ matrix.target }}
+          path: uploads/*
+          retention-days: 1
+          if-no-files-found: error
 
   cbindgen:
     name: Generate C Header
@@ -51,6 +72,8 @@ jobs:
         with:
           name: release_c_header
           path: VirtualDesktopAccessor.h
+          retention-days: 1
+          if-no-files-found: error
 
   release:
     name: Release
@@ -59,49 +82,20 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download DLL from previous job
+      - name: Download files from previous jobs
         uses: actions/download-artifact@v4
         with:
-          name: release_dll
+          path: artifacts
+          merge-multiple: true
 
-      - name: Download C Header from previous job
-        uses: actions/download-artifact@v4
-        with:
-          name: release_c_header
+      - name: Display structure of downloaded files
+        run: ls artifacts
 
-      # Create the release:  https://github.com/actions/create-release
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      # Upload release asset:  https://github.com/actions/upload-release-asset
+      # which recommends:      https://github.com/softprops/action-gh-release
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
         with:
-          tag_name: ${{github.ref}}
-          release_name: VirtualDesktopAccessor ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-      # Upload release asset:   https://github.com/actions/upload-release-asset
-      - name: Upload release DLL
-        id: upload-release-dll
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}  # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: VirtualDesktopAccessor.dll
-          asset_name: VirtualDesktopAccessor.dll
-          asset_content_type: application/octet-stream
-
-      # Upload release asset:   https://github.com/actions/upload-release-asset
-      - name: Upload release C Header
-        id: upload-release-c-header
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}  # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: VirtualDesktopAccessor.h
-          asset_name: VirtualDesktopAccessor.h
-          asset_content_type: text/x-c-header
+          files: artifacts/*
 
