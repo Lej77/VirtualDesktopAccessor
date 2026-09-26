@@ -1088,9 +1088,9 @@ support_interface!(MacroOptions {
 
 #[apply(forward_call)]
 impl IVirtualDesktopPinnedApps {
-    pub unsafe fn is_app_pinned(&self, app_id: PCWSTR, out_iss: *mut bool) -> HRESULT;
-    pub unsafe fn pin_app(&self, app_id: PCWSTR) -> HRESULT;
-    pub unsafe fn unpin_app(&self, app_id: PCWSTR) -> HRESULT;
+    pub unsafe fn is_app_pinned(&self, app_id: APPIDPWSTR, out_iss: *mut bool) -> HRESULT;
+    pub unsafe fn pin_app(&self, app_id: APPIDPWSTR) -> HRESULT;
+    pub unsafe fn unpin_app(&self, app_id: APPIDPWSTR) -> HRESULT;
 
     pub unsafe fn is_view_pinned(
         &self,
